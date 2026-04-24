@@ -1,21 +1,21 @@
 version: 2
 updates:
   - package-ecosystem: "cargo"
-    directory: "/"
+    directory: "/rust"
     schedule:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
     labels: ["dependencies", "automated"]
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/typescript"
     schedule:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
     labels: ["dependencies", "automated"]
   - package-ecosystem: "gomod"
-    directory: "/"
+    directory: "/go"
     schedule:
       interval: "weekly"
       day: "monday"
