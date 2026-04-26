@@ -1,5 +1,10 @@
 # McpKit
 
+[![Build](https://img.shields.io/github/actions/workflow/status/KooshaPari/McpKit/ci.yml?branch=main&label=build)](https://github.com/KooshaPari/McpKit/actions)
+[![Release](https://img.shields.io/github/v/release/KooshaPari/McpKit?include_prereleases&sort=semver)](https://github.com/KooshaPari/McpKit/releases)
+[![License](https://img.shields.io/github/license/KooshaPari/McpKit)](LICENSE)
+[![Phenotype](https://img.shields.io/badge/Phenotype-org-blueviolet)](https://github.com/KooshaPari)
+
 Polyglot MCP (Model Context Protocol) framework SDK for the Phenotype ecosystem. Provides idiomatic client and server primitives in Go, Rust, TypeScript, and Python from a single registry-driven source of truth.
 
 **Part of the [Phenotype org](https://github.com/KooshaPari) ecosystem.** Shares CI reusables and conventions with [phenoShared](https://github.com/KooshaPari/phenoShared). Follows org conventions: conventional commits, `<type>/<topic>` branching, Apache-2.0 + MIT dual license.
