@@ -46,3 +46,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Worktree directories (org policy)
+.worktrees/
+.claude/worktrees/
