@@ -10,45 +10,66 @@ McpKit gives Phenotype services a uniform way to build and consume MCP servers/c
 
 Downstream consumers include agent frameworks, the [PhenoRuntime](https://github.com/KooshaPari/PhenoRuntime) MCP server, and external-intake pipelines.
 
-## Status
+## Status (Phase 1)
 
-**Active.** Multi-language scaffolding in place; bindings track the registry at release time. Owner: `team-agents`.
+This repository is in **early scaffolding**. Binding maturity differs by language — choose accordingly:
+
+| Binding     | State           | Notes |
+|-------------|-----------------|-------|
+| Python      | **Real**        | Lives in the `python/pheno-mcp` submodule (upstream: [`KooshaPari/PhenoMCP`](https://github.com/KooshaPari/PhenoMCP)). Build/test from there directly. |
+| Rust        | **Real**        | `rust/` cargo workspace builds. Includes vendored `mcp-forge` codegen tooling. |
+| Go          | **Scaffold**    | `go/go.work` only; no modules wired yet. Do not depend on this surface. |
+| TypeScript  | **Scaffold**    | Directory placeholder; no package published yet. |
+
+Owner: `team-agents`.
 
 ## Requirements
 
-- **Go** binding: Go 1.22+
+- **Go** binding (when implemented): Go 1.22+
 - **Rust** binding: Rust stable, edition 2021
-- **TypeScript** binding: Node 20+ (pnpm preferred)
-- **Python** binding: Python 3.11+ (`uv` or `pip` — `pyproject.toml` at repo root)
+- **TypeScript** binding (when implemented): Node 20+ (pnpm preferred)
+- **Python** binding: Python 3.11+ (`uv` or `pip`)
 
 ## Quick start
 
-Clone and build the binding you need:
+> **Note:** the root `pyproject.toml` is a *dev-tooling* config (pytest/black/ruff) for running checks across the workspace — it does **not** install any Python package. Real Python work happens inside the `python/pheno-mcp` submodule.
+
+Clone with submodules:
 
 ```bash
-# Go
-cd go && go build ./... && go test ./...
+git clone --recurse-submodules https://github.com/KooshaPari/McpKit.git
+# or, after a plain clone:
+git submodule update --init --recursive
+```
 
-# Rust
+Then build the binding you need:
+
+```bash
+# Rust (real)
 cd rust && cargo build --workspace && cargo test --workspace
 
-# TypeScript
-cd typescript && pnpm install && pnpm build && pnpm test
+# Python (real — work inside the submodule)
+cd python/pheno-mcp
+pip install -e '.[dev]'   # or: uv sync
+pytest
 
-# Python
-uv sync            # or: pip install -e '.[dev]'
-uv run pytest      # or: pytest
+# Workspace dev tools (lint/format only — does NOT install pheno-mcp)
+pip install -e '.[dev]' .  # from repo root, optional
 ```
+
+Sample servers and a getting-started walkthrough live in the [PhenoMCP repo](https://github.com/KooshaPari/PhenoMCP). The McpKit-side `examples/` directory referenced in earlier drafts of this doc has not landed yet; track it via the open issue list.
+
+Go and TypeScript bindings are not yet runnable — see **Status** above.
 
 ## Structure
 
 ```
-go/            # Go MCP bindings (go.work multi-module)
-rust/          # Rust MCP crates (cargo workspace)
-typescript/    # TypeScript MCP bindings (package workspace)
-python/        # Python MCP bindings (pyproject-driven)
+go/            # Go MCP bindings — scaffold (go.work only)
+rust/          # Rust MCP crates (cargo workspace) — real
+typescript/    # TypeScript MCP bindings — scaffold (placeholder)
+python/        # Python MCP bindings (submodule -> KooshaPari/PhenoMCP) — real
 registry.yaml  # Canonical MCP tool/resource/prompt registry — source of truth
-pyproject.toml # Python packaging / dev tooling entry
+pyproject.toml # Workspace dev-tooling config (pytest/black/ruff); no package
 ```
 
 ## Design principles
