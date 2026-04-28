@@ -9,7 +9,13 @@ vars:
         | tr '\n' ' ' || true
   PYTHON_ROOT: "python/pheno-mcp"
   TS_ROOT: "typescript"
-  GO_ROOT: "go"
+  GO_MODULES:
+    sh: |
+      find . -path './.git' -prune -o \
+        -path './rust/mcp-forge/integrationtests' -prune -o \
+        -name go.mod -type f -print \
+        | sed 's#/go.mod$##; s#^\./##' \
+        | tr '\n' ' ' || true
 
 tasks:
   default:
@@ -48,11 +54,14 @@ tasks:
             echo "Skipping TypeScript build: scaffold detected without tsconfig.json"
           fi
 
-          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
-            echo "Building Go module"
-            (cd "{{.GO_ROOT}}" && go build ./...)
+          if [ -n "{{.GO_MODULES}}" ]; then
+            echo "Building Go modules"
+            for module in {{.GO_MODULES}}; do
+              echo "  - $module"
+              (cd "$module" && go build ./...)
+            done
             ran=1
-          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+          elif [ -f "go/go.work" ]; then
             echo "Skipping Go build: scaffold detected without go.mod"
           fi
 
@@ -92,11 +101,14 @@ tasks:
             echo "Skipping TypeScript tests: scaffold detected without tsconfig.json"
           fi
 
-          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
-            echo "Testing Go module"
-            (cd "{{.GO_ROOT}}" && go test ./...)
+          if [ -n "{{.GO_MODULES}}" ]; then
+            echo "Testing Go modules"
+            for module in {{.GO_MODULES}}; do
+              echo "  - $module"
+              (cd "$module" && go test ./...)
+            done
             ran=1
-          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+          elif [ -f "go/go.work" ]; then
             echo "Skipping Go tests: scaffold detected without go.mod"
           fi
 
@@ -144,15 +156,18 @@ tasks:
             echo "Skipping TypeScript lint: scaffold detected without tsconfig.json"
           fi
 
-          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
-            echo "Linting Go module"
-            (
-              cd "{{.GO_ROOT}}" && \
-              test -z "$(gofmt -l .)" && \
-              go test ./...
-            )
+          if [ -n "{{.GO_MODULES}}" ]; then
+            echo "Linting Go modules"
+            for module in {{.GO_MODULES}}; do
+              echo "  - $module"
+              (
+                cd "$module" && \
+                test -z "$(gofmt -l .)" && \
+                go test ./...
+              )
+            done
             ran=1
-          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+          elif [ -f "go/go.work" ]; then
             echo "Skipping Go lint: scaffold detected without go.mod"
           fi
 
@@ -190,11 +205,14 @@ tasks:
             ran=1
           fi
 
-          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
+          if [ -n "{{.GO_MODULES}}" ]; then
             echo "Cleaning Go module cache artefacts"
-            (cd "{{.GO_ROOT}}" && go clean)
+            for module in {{.GO_MODULES}}; do
+              echo "  - $module"
+              (cd "$module" && go clean)
+            done
             ran=1
-          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+          elif [ -f "go/go.work" ]; then
             echo "Skipping Go clean: scaffold detected without go.mod"
           fi
 
