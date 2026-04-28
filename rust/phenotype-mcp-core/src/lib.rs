@@ -22,23 +22,23 @@
 
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
+pub mod client;
 pub mod error;
+pub mod handlers;
 pub mod protocol;
 pub mod resources;
 pub mod server;
 pub mod tools;
 pub mod transport;
-pub mod client;
-pub mod handlers;
 
+pub use client::*;
 pub use error::*;
+pub use handlers::*;
 pub use protocol::*;
 pub use resources::*;
 pub use server::*;
 pub use tools::*;
 pub use transport::*;
-pub use client::*;
-pub use handlers::*;
 
 /// MCP protocol version
 pub const MCP_PROTOCOL_VERSION: &str = "2024-11-05";

@@ -23,6 +23,14 @@ vars:
       else
         command -v go
       fi
+  GOFMT_CMD:
+    sh: |
+      go_dir="$(dirname "{{.GO_CMD}}")"
+      if [ -x "$go_dir/gofmt" ]; then
+        echo "$go_dir/gofmt"
+      else
+        command -v gofmt
+      fi
 
 tasks:
   default:
@@ -176,7 +184,7 @@ tasks:
             echo "Linting Go modules"
             for module in {{.GO_MODULES}}; do
               echo "  - $module"
-              unformatted="$(cd "$module" && gofmt -l .)"
+              unformatted="$(cd "$module" && {{.GOFMT_CMD}} -l .)"
               if [ -n "$unformatted" ]; then
                 echo "$unformatted" >&2
                 exit 1
