@@ -8,7 +8,13 @@ vars:
         | grep -v '/phenotype-mcp-asset$' \
         | sed 's#rust/##' \
         | tr '\n' ' ' || true
-  PYTHON_ROOT: python/pheno-mcp
+  PYTHON_ROOTS:
+    sh: |
+      find . -path './.git' -prune -o \
+        -path './rust/mcp-forge/integrationtests' -prune -o \
+        -name pyproject.toml -type f -print \
+        | sed 's#/pyproject.toml$##; s#^\.$#.#; s#^\./##' \
+        | tr '\n' ' ' || true
   TS_ROOT: typescript
   GO_MODULES:
     sh: |
@@ -54,12 +60,20 @@ tasks:
             ran=1
           fi
 
-          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
-            echo "Syncing Python submodule"
-            (cd "{{.PYTHON_ROOT}}" && uv sync)
+          if [ -n "{{.PYTHON_ROOTS}}" ]; then
+            echo "Building Python workspaces"
+            for root in {{.PYTHON_ROOTS}}; do
+              echo "  - $root"
+              python_sources="$(find "$root" \
+                \( -path "$root/.git" -o -path "$root/.venv" -o -path "$root/rust/mcp-forge/integrationtests" \) -prune -o \
+                -name '*.py' -type f -print)"
+              if [ -n "$python_sources" ]; then
+                printf '%s\n' "$python_sources" | xargs python -m py_compile
+              else
+                echo "    no Python sources to compile"
+              fi
+            done
             ran=1
-          elif grep -q 'path = {{.PYTHON_ROOT}}' .gitmodules 2>/dev/null; then
-            echo "Skipping Python build: submodule {{.PYTHON_ROOT}} is not initialized"
           fi
 
           if [ -f "{{.TS_ROOT}}/package.json" ] && [ -f "{{.TS_ROOT}}/tsconfig.json" ]; then
@@ -107,12 +121,19 @@ tasks:
             ran=1
           fi
 
-          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
-            echo "Testing Python submodule"
-            (cd "{{.PYTHON_ROOT}}" && uv run pytest)
+          if [ -n "{{.PYTHON_ROOTS}}" ]; then
+            echo "Testing Python workspaces"
+            for root in {{.PYTHON_ROOTS}}; do
+              echo "  - $root"
+              if find "$root" \
+                \( -path "$root/.git" -o -path "$root/.venv" -o -path "$root/rust/mcp-forge/integrationtests" \) -prune -o \
+                \( -name 'test_*.py' -o -name '*_test.py' \) -type f -print | grep -q .; then
+                (cd "$root" && uv run pytest)
+              else
+                echo "    no Python tests detected"
+              fi
+            done
             ran=1
-          elif grep -q 'path = {{.PYTHON_ROOT}}' .gitmodules 2>/dev/null; then
-            echo "Skipping Python tests: submodule {{.PYTHON_ROOT}} is not initialized"
           fi
 
           if [ -f "{{.TS_ROOT}}/package.json" ] && [ -f "{{.TS_ROOT}}/tsconfig.json" ]; then
@@ -161,12 +182,19 @@ tasks:
             ran=1
           fi
 
-          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
-            echo "Linting Python submodule"
-            (cd "{{.PYTHON_ROOT}}" && uv run ruff check . && uv run black --check .)
+          if [ -n "{{.PYTHON_ROOTS}}" ]; then
+            echo "Linting Python workspaces"
+            for root in {{.PYTHON_ROOTS}}; do
+              echo "  - $root"
+              if find "$root" \
+                \( -path "$root/.git" -o -path "$root/.venv" -o -path "$root/rust/mcp-forge/integrationtests" \) -prune -o \
+                -name '*.py' -type f -print | grep -q .; then
+                (cd "$root" && uv run ruff check . --exclude rust/mcp-forge/integrationtests && uv run black --check . --exclude '/rust/mcp-forge/integrationtests/')
+              else
+                echo "    no Python sources to lint"
+              fi
+            done
             ran=1
-          elif grep -q 'path = {{.PYTHON_ROOT}}' .gitmodules 2>/dev/null; then
-            echo "Skipping Python lint: submodule {{.PYTHON_ROOT}} is not initialized"
           fi
 
           if [ -f "{{.TS_ROOT}}/package.json" ] && [ -f "{{.TS_ROOT}}/tsconfig.json" ]; then
@@ -216,12 +244,32 @@ tasks:
             ran=1
           fi
 
-          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
-            echo "Cleaning Python submodule artifacts"
-            python -c 'from pathlib import Path; import shutil; root = Path("python/pheno-mcp"); targets = [root / ".pytest_cache", root / ".ruff_cache", root / ".mypy_cache", root / "build", root / "dist"]; [shutil.rmtree(path) if path.is_dir() else path.unlink() for path in targets if path.exists()]; [shutil.rmtree(path) for path in root.rglob("__pycache__") if path.is_dir()]; [path.unlink() for path in root.rglob("*.pyc") if path.exists()]'
+          if [ -n "{{.PYTHON_ROOTS}}" ]; then
+            echo "Cleaning Python workspace artifacts"
+            for root in {{.PYTHON_ROOTS}}; do
+              echo "  - $root"
+              python - "$root" <<'PY'
+          import shutil
+          import sys
+          from pathlib import Path
+
+          root = Path(sys.argv[1])
+          ignored = {".git", ".venv", "node_modules", "target"}
+          for name in [".pytest_cache", ".ruff_cache", ".mypy_cache", "build", "dist"]:
+              path = root / name
+              if path.is_dir():
+                  shutil.rmtree(path)
+              elif path.exists():
+                  path.unlink()
+          for path in root.rglob("__pycache__"):
+              if not ignored.intersection(path.parts) and path.is_dir():
+                  shutil.rmtree(path)
+          for path in root.rglob("*.pyc"):
+              if not ignored.intersection(path.parts) and path.exists():
+                  path.unlink()
+          PY
+            done
             ran=1
-          elif grep -q 'path = {{.PYTHON_ROOT}}' .gitmodules 2>/dev/null; then
-            echo "Skipping Python clean: submodule {{.PYTHON_ROOT}} is not initialized"
           fi
 
           if [ -f "{{.TS_ROOT}}/package.json" ]; then
