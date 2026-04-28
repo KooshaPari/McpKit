@@ -3,10 +3,11 @@ version: "3"
 vars:
   RUST_ROOT: "rust"
   PYTHON_ROOT: "python/pheno-mcp"
+  TS_ROOT: "typescript"
 
 tasks:
   default:
-    desc: Run the default build for the detected real language surfaces
+    desc: Run the default workspace build
     cmds:
       - task: build
 
@@ -35,13 +36,21 @@ tasks:
             ran=1
           fi
 
+          if [ -f "{{.TS_ROOT}}/package.json" ] && [ -f "{{.TS_ROOT}}/tsconfig.json" ]; then
+            echo "Building TypeScript workspace"
+            (cd "{{.TS_ROOT}}" && npm run build)
+            ran=1
+          elif [ -f "{{.TS_ROOT}}/package.json" ]; then
+            echo "Skipping TypeScript build: scaffold detected without tsconfig.json"
+          fi
+
           if [ "$ran" -eq 0 ]; then
             echo "No supported build target detected" >&2
             exit 1
           fi
 
   test:
-    desc: Run tests for the detected real language surfaces
+    desc: Test the detected real language surfaces
     cmds:
       - cmd: |
           set -eu
@@ -63,6 +72,14 @@ tasks:
             echo "Testing Python submodule"
             (cd "{{.PYTHON_ROOT}}" && uv run pytest)
             ran=1
+          fi
+
+          if [ -f "{{.TS_ROOT}}/package.json" ] && [ -f "{{.TS_ROOT}}/tsconfig.json" ]; then
+            echo "Testing TypeScript workspace"
+            (cd "{{.TS_ROOT}}" && npm test)
+            ran=1
+          elif [ -f "{{.TS_ROOT}}/package.json" ]; then
+            echo "Skipping TypeScript tests: scaffold detected without tsconfig.json"
           fi
 
           if [ "$ran" -eq 0 ]; then
@@ -103,6 +120,14 @@ tasks:
             ran=1
           fi
 
+          if [ -f "{{.TS_ROOT}}/package.json" ] && [ -f "{{.TS_ROOT}}/tsconfig.json" ]; then
+            echo "Linting TypeScript workspace"
+            (cd "{{.TS_ROOT}}" && npm run lint)
+            ran=1
+          elif [ -f "{{.TS_ROOT}}/package.json" ]; then
+            echo "Skipping TypeScript lint: scaffold detected without tsconfig.json"
+          fi
+
           if [ "$ran" -eq 0 ]; then
             echo "No supported lint target detected" >&2
             exit 1
@@ -129,7 +154,13 @@ tasks:
 
           if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
             echo "Cleaning Python submodule artefacts"
-            python -c "from pathlib import Path; import shutil; root = Path('python/pheno-mcp'); targets = [root / '.pytest_cache', root / '.ruff_cache', root / '.mypy_cache', root / 'build', root / 'dist']; [shutil.rmtree(path) if path.is_dir() else path.unlink() for path in targets if path.exists()]; [shutil.rmtree(path) for path in root.rglob('__pycache__') if path.is_dir()]; [path.unlink() for path in root.rglob('*.pyc') if path.exists()]"
+            python -c 'from pathlib import Path; import shutil; root = Path("python/pheno-mcp"); targets = [root / ".pytest_cache", root / ".ruff_cache", root / ".mypy_cache", root / "build", root / "dist", root / "site-packages"]; [shutil.rmtree(path) if path.is_dir() else path.unlink() for path in targets if path.exists()]; [shutil.rmtree(path) for path in root.rglob("__pycache__") if path.is_dir()]; [path.unlink() for path in root.rglob("*.pyc") if path.exists()]'
+            ran=1
+          fi
+
+          if [ -f "{{.TS_ROOT}}/package.json" ]; then
+            echo "Cleaning TypeScript workspace artefacts"
+            python -c 'from pathlib import Path; import shutil; root = Path("typescript"); targets = [root / "node_modules", root / "dist", root / "coverage", root / ".turbo"]; [shutil.rmtree(path) if path.is_dir() else path.unlink() for path in targets if path.exists()]'
             ran=1
           fi
 
