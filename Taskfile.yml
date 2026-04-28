@@ -1,9 +1,15 @@
 version: "3"
 
 vars:
-  RUST_ROOT: "rust"
+  RUST_CRATES:
+    sh: |
+      find rust -mindepth 1 -maxdepth 1 -name 'phenotype-mcp-*' -type d \
+        -exec test -f '{}/Cargo.toml' ';' -print \
+        | grep -v '/phenotype-mcp-asset$' \
+        | tr '\n' ' ' || true
   PYTHON_ROOT: "python/pheno-mcp"
   TS_ROOT: "typescript"
+  GO_ROOT: "go"
 
 tasks:
   default:
@@ -19,13 +25,11 @@ tasks:
 
           ran=0
 
-          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
-            echo "Building Rust crates"
-            for crate in phenotype-mcp-core phenotype-mcp-framework; do
-              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
-                echo "  - $crate"
-                (cd "{{.RUST_ROOT}}/$crate" && cargo build)
-              fi
+          if [ -n "{{.RUST_CRATES}}" ]; then
+            echo "Building runnable Rust crates"
+            for crate in {{.RUST_CRATES}}; do
+              echo "  - $crate"
+              (cd "$crate" && cargo build)
             done
             ran=1
           fi
@@ -44,6 +48,14 @@ tasks:
             echo "Skipping TypeScript build: scaffold detected without tsconfig.json"
           fi
 
+          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
+            echo "Building Go module"
+            (cd "{{.GO_ROOT}}" && go build ./...)
+            ran=1
+          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+            echo "Skipping Go build: scaffold detected without go.mod"
+          fi
+
           if [ "$ran" -eq 0 ]; then
             echo "No supported build target detected" >&2
             exit 1
@@ -57,13 +69,11 @@ tasks:
 
           ran=0
 
-          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
-            echo "Testing Rust crates"
-            for crate in phenotype-mcp-core phenotype-mcp-framework; do
-              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
-                echo "  - $crate"
-                (cd "{{.RUST_ROOT}}/$crate" && cargo test)
-              fi
+          if [ -n "{{.RUST_CRATES}}" ]; then
+            echo "Testing runnable Rust crates"
+            for crate in {{.RUST_CRATES}}; do
+              echo "  - $crate"
+              (cd "$crate" && cargo test)
             done
             ran=1
           fi
@@ -82,6 +92,14 @@ tasks:
             echo "Skipping TypeScript tests: scaffold detected without tsconfig.json"
           fi
 
+          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
+            echo "Testing Go module"
+            (cd "{{.GO_ROOT}}" && go test ./...)
+            ran=1
+          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+            echo "Skipping Go tests: scaffold detected without go.mod"
+          fi
+
           if [ "$ran" -eq 0 ]; then
             echo "No supported test target detected" >&2
             exit 1
@@ -95,17 +113,15 @@ tasks:
 
           ran=0
 
-          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
-            echo "Linting Rust crates"
-            for crate in phenotype-mcp-core phenotype-mcp-framework; do
-              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
-                echo "  - $crate"
-                (
-                  cd "{{.RUST_ROOT}}/$crate" && \
-                  cargo fmt --check && \
-                  cargo clippy --all-targets --all-features -- -D warnings
-                )
-              fi
+          if [ -n "{{.RUST_CRATES}}" ]; then
+            echo "Linting runnable Rust crates"
+            for crate in {{.RUST_CRATES}}; do
+              echo "  - $crate"
+              (
+                cd "$crate" && \
+                cargo fmt --check && \
+                cargo clippy --all-targets --all-features -- -D warnings
+              )
             done
             ran=1
           fi
@@ -128,6 +144,18 @@ tasks:
             echo "Skipping TypeScript lint: scaffold detected without tsconfig.json"
           fi
 
+          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
+            echo "Linting Go module"
+            (
+              cd "{{.GO_ROOT}}" && \
+              test -z "$(gofmt -l .)" && \
+              go test ./...
+            )
+            ran=1
+          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+            echo "Skipping Go lint: scaffold detected without go.mod"
+          fi
+
           if [ "$ran" -eq 0 ]; then
             echo "No supported lint target detected" >&2
             exit 1
@@ -141,13 +169,11 @@ tasks:
 
           ran=0
 
-          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
-            echo "Cleaning Rust crates"
-            for crate in phenotype-mcp-core phenotype-mcp-framework; do
-              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
-                echo "  - $crate"
-                (cd "{{.RUST_ROOT}}/$crate" && cargo clean)
-              fi
+          if [ -n "{{.RUST_CRATES}}" ]; then
+            echo "Cleaning runnable Rust crates"
+            for crate in {{.RUST_CRATES}}; do
+              echo "  - $crate"
+              (cd "$crate" && cargo clean)
             done
             ran=1
           fi
@@ -162,6 +188,14 @@ tasks:
             echo "Cleaning TypeScript workspace artefacts"
             python -c 'from pathlib import Path; import shutil; root = Path("typescript"); targets = [root / "node_modules", root / "dist", root / "coverage", root / ".turbo"]; [shutil.rmtree(path) if path.is_dir() else path.unlink() for path in targets if path.exists()]'
             ran=1
+          fi
+
+          if [ -f "{{.GO_ROOT}}/go.mod" ]; then
+            echo "Cleaning Go module cache artefacts"
+            (cd "{{.GO_ROOT}}" && go clean)
+            ran=1
+          elif [ -f "{{.GO_ROOT}}/go.work" ]; then
+            echo "Skipping Go clean: scaffold detected without go.mod"
           fi
 
           if [ "$ran" -eq 0 ]; then
