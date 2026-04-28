@@ -5,7 +5,6 @@ vars:
     sh: |
       find rust -mindepth 1 -maxdepth 1 -name 'phenotype-mcp-*' -type d \
         -exec test -f '{}/Cargo.toml' ';' -print \
-        | grep -v '/phenotype-mcp-asset$' \
         | sed 's#rust/##' \
         | tr '\n' ' ' || true
   PYTHON_ROOTS:
