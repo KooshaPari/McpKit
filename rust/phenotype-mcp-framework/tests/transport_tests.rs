@@ -4,7 +4,6 @@
 mod tests {
     use phenotype_mcp_framework::*;
     use serde_json::json;
-    use std::io::{BufRead, Write};
     use std::sync::{Arc, Mutex};
 
     // Mock server for testing

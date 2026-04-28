@@ -2,9 +2,10 @@
 
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
-    use phenotype_mcp_framework::*;
     use async_trait::async_trait;
+    use phenotype_mcp_framework::*;
+    use serde_json::json;
+    use std::sync::Arc;
 
     // Test implementation of AsyncMcpServer
     struct TestAsyncServer;
@@ -20,20 +21,22 @@ mod tests {
         }
 
         fn tools(&self) -> Vec<Tool> {
-            vec![
-                Tool::with_properties(
-                    "async_echo",
-                    "Async echo",
-                    json!({"message": { "type": "string" } }),
-                    vec!["message".to_string()],
-                ),
-            ]
+            vec![Tool::with_properties(
+                "async_echo",
+                "Async echo",
+                json!({"message": { "type": "string" } }),
+                vec!["message".to_string()],
+            )]
         }
 
-        async fn handle_tool(&self, name: String, arguments: serde_json::Value) -> Result<String, String> {
+        async fn handle_tool(
+            &self,
+            name: String,
+            arguments: serde_json::Value,
+        ) -> Result<String, String> {
             // Simulate async work
             tokio::task::yield_now().await;
-            
+
             match name.as_str() {
                 "async_echo" => {
                     let msg = arguments
@@ -71,10 +74,9 @@ mod tests {
     #[tokio::test]
     async fn test_async_handle_tool() {
         let server = TestAsyncServer;
-        let result = server.handle_tool(
-            "async_echo".to_string(),
-            json!({"message": "Hello Async!"}),
-        ).await;
+        let result = server
+            .handle_tool("async_echo".to_string(), json!({"message": "Hello Async!"}))
+            .await;
 
         assert_eq!(result.unwrap(), "Async echo: Hello Async!");
     }
@@ -82,10 +84,7 @@ mod tests {
     #[tokio::test]
     async fn test_async_handle_tool_unknown() {
         let server = TestAsyncServer;
-        let result = server.handle_tool(
-            "unknown".to_string(),
-            json!({}),
-        ).await;
+        let result = server.handle_tool("unknown".to_string(), json!({})).await;
 
         assert!(result.is_err());
     }
@@ -116,13 +115,15 @@ mod tests {
     #[tokio::test]
     async fn test_async_handle_tool_call_success() {
         let server = TestAsyncServer;
-        let response = server.handle_tool_call(
-            Some(json!(3)),
-            Some(json!({
-                "name": "async_echo",
-                "arguments": {"message": "test"}
-            })),
-        ).await;
+        let response = server
+            .handle_tool_call(
+                Some(json!(3)),
+                Some(json!({
+                    "name": "async_echo",
+                    "arguments": {"message": "test"}
+                })),
+            )
+            .await;
 
         assert!(response.result.is_some());
         assert!(!response.result.unwrap()["is_error"].as_bool().unwrap());
@@ -186,22 +187,24 @@ mod tests {
     // Test concurrent async operations
     #[tokio::test]
     async fn test_concurrent_tool_calls() {
-        let server = TestAsyncServer;
-        
+        let server = Arc::new(TestAsyncServer);
+
         let handles: Vec<_> = (0..10)
             .map(|i| {
-                let server = &server;
+                let server = Arc::clone(&server);
                 tokio::spawn(async move {
-                    server.handle_tool(
-                        "async_echo".to_string(),
-                        json!({"message": format!("message {}", i)}),
-                    ).await
+                    server
+                        .handle_tool(
+                            "async_echo".to_string(),
+                            json!({"message": format!("message {}", i)}),
+                        )
+                        .await
                 })
             })
             .collect();
 
         let results = futures::future::join_all(handles).await;
-        
+
         for (i, result) in results.iter().enumerate() {
             assert!(result.is_ok());
             let inner = result.as_ref().unwrap();

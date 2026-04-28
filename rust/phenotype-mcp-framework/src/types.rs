@@ -1,12 +1,20 @@
 //! MCP Protocol types
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
+fn deserialize_jsonrpc_id<'de, D>(deserializer: D) -> Result<Option<Value>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Value::deserialize(deserializer).map(Some)
+}
+
 /// MCP request structure (JSON-RPC)
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct McpRequest {
     pub jsonrpc: String,
+    #[serde(default, deserialize_with = "deserialize_jsonrpc_id")]
     pub id: Option<Value>,
     pub method: String,
     #[serde(skip_serializing_if = "Option::is_none")]

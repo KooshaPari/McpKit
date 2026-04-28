@@ -3,8 +3,7 @@
 //! Provides a client for connecting to MCP servers
 
 use crate::{
-    transport::Transport,
-    ClientInfo, ClientCapabilities, InitializeRequest, InitializeResponse,
+    transport::Transport, ClientCapabilities, ClientInfo, InitializeRequest, InitializeResponse,
     McpResult,
 };
 use std::sync::Arc;
@@ -39,7 +38,7 @@ impl Client {
             capabilities: ClientCapabilities::default(),
             client_info: self.client_info.clone(),
         };
-        
+
         // This would send the initialize request and parse response
         // Simplified for now
         let response = InitializeResponse {
@@ -47,7 +46,7 @@ impl Client {
             capabilities: crate::ServerCapabilities::default(),
             server_info: crate::ServerInfo::new("server", "1.0.0"),
         };
-        
+
         self.server_info = Some(response.clone());
         Ok(response)
     }
