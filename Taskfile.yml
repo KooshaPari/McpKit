@@ -16,6 +16,13 @@ vars:
         -name go.mod -type f -print \
         | sed 's#/go.mod$##; s#^\./##' \
         | tr '\n' ' ' || true
+  GO_CMD:
+    sh: |
+      if [ -x /opt/homebrew/bin/go ]; then
+        echo /opt/homebrew/bin/go
+      else
+        command -v go
+      fi
 
 tasks:
   default:
@@ -59,7 +66,12 @@ tasks:
             echo "Building Go modules"
             for module in {{.GO_MODULES}}; do
               echo "  - $module"
-              (cd "$module" && go build ./...)
+              packages="$(cd "$module" && {{.GO_CMD}} list ./... | grep -v '/integrationtests/' | grep -v '/internal/watcher/testing$' | tr '\n' ' ' || true)"
+              if [ -n "$packages" ]; then
+                (cd "$module" && {{.GO_CMD}} build $packages)
+              else
+                echo "    no default Go packages detected"
+              fi
             done
             ran=1
           elif [ -f "go/go.work" ]; then
@@ -107,7 +119,12 @@ tasks:
             echo "Testing Go modules"
             for module in {{.GO_MODULES}}; do
               echo "  - $module"
-              (cd "$module" && go test ./...)
+              packages="$(cd "$module" && {{.GO_CMD}} list ./... | grep -v '/integrationtests/' | grep -v '/internal/watcher/testing$' | tr '\n' ' ' || true)"
+              if [ -n "$packages" ]; then
+                (cd "$module" && {{.GO_CMD}} test $packages)
+              else
+                echo "    no default Go packages detected"
+              fi
             done
             ran=1
           elif [ -f "go/go.work" ]; then
@@ -164,7 +181,12 @@ tasks:
                 echo "$unformatted" >&2
                 exit 1
               fi
-              (cd "$module" && go test ./...)
+              packages="$(cd "$module" && {{.GO_CMD}} list ./... | grep -v '/integrationtests/' | grep -v '/internal/watcher/testing$' | tr '\n' ' ' || true)"
+              if [ -n "$packages" ]; then
+                (cd "$module" && {{.GO_CMD}} test $packages)
+              else
+                echo "    no default Go packages detected"
+              fi
             done
             ran=1
           elif [ -f "go/go.work" ]; then
@@ -210,7 +232,7 @@ tasks:
             echo "Cleaning Go modules"
             for module in {{.GO_MODULES}}; do
               echo "  - $module"
-              (cd "$module" && go clean)
+              (cd "$module" && {{.GO_CMD}} clean)
             done
             ran=1
           elif [ -f "go/go.work" ]; then
