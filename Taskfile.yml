@@ -1,11 +1,12 @@
 version: "3"
 
 vars:
-  RUST_CRATES:
+  RUST_PACKAGES:
     sh: |
       find rust -mindepth 1 -maxdepth 1 -name 'phenotype-mcp-*' -type d \
         -exec test -f '{}/Cargo.toml' ';' -print \
         | grep -v '/phenotype-mcp-asset$' \
+        | sed 's#rust/##' \
         | tr '\n' ' ' || true
   PYTHON_ROOT: python/pheno-mcp
   TS_ROOT: typescript
@@ -44,11 +45,11 @@ tasks:
           set -eu
           ran=0
 
-          if [ -n "{{.RUST_CRATES}}" ]; then
+          if [ -n "{{.RUST_PACKAGES}}" ]; then
             echo "Building runnable Rust crates"
-            for crate in {{.RUST_CRATES}}; do
-              echo "  - $crate"
-              (cd "$crate" && cargo build)
+            for package in {{.RUST_PACKAGES}}; do
+              echo "  - $package"
+              (cd rust && cargo build -p "$package")
             done
             ran=1
           fi
@@ -97,11 +98,11 @@ tasks:
           set -eu
           ran=0
 
-          if [ -n "{{.RUST_CRATES}}" ]; then
+          if [ -n "{{.RUST_PACKAGES}}" ]; then
             echo "Testing runnable Rust crates"
-            for crate in {{.RUST_CRATES}}; do
-              echo "  - $crate"
-              (cd "$crate" && cargo test)
+            for package in {{.RUST_PACKAGES}}; do
+              echo "  - $package"
+              (cd rust && cargo test -p "$package")
             done
             ran=1
           fi
@@ -150,15 +151,12 @@ tasks:
           set -eu
           ran=0
 
-          if [ -n "{{.RUST_CRATES}}" ]; then
+          if [ -n "{{.RUST_PACKAGES}}" ]; then
             echo "Linting runnable Rust crates"
-            for crate in {{.RUST_CRATES}}; do
-              echo "  - $crate"
-              (
-                cd "$crate" && \
-                cargo fmt --check && \
-                cargo clippy --all-targets --all-features -- -D warnings
-              )
+            for package in {{.RUST_PACKAGES}}; do
+              echo "  - $package"
+              (cd "rust/$package" && cargo fmt --check)
+              (cd rust && cargo clippy -p "$package" --all-targets --all-features -- -D warnings)
             done
             ran=1
           fi
@@ -212,12 +210,9 @@ tasks:
           set -eu
           ran=0
 
-          if [ -n "{{.RUST_CRATES}}" ]; then
+          if [ -n "{{.RUST_PACKAGES}}" ]; then
             echo "Cleaning runnable Rust crates"
-            for crate in {{.RUST_CRATES}}; do
-              echo "  - $crate"
-              (cd "$crate" && cargo clean)
-            done
+            (cd rust && cargo clean)
             ran=1
           fi
 

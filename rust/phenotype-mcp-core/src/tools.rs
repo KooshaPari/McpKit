@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 
 /// Tool definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,11 +37,10 @@ pub enum ToolContent {
     Text { text: String },
 }
 
-impl ToolContent {
-    /// Convert to string representation
-    pub fn to_string(&self) -> String {
+impl fmt::Display for ToolContent {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ToolContent::Text { text } => text.clone(),
+            ToolContent::Text { text } => f.write_str(text),
         }
     }
 }
