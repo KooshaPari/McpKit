@@ -81,7 +81,7 @@ impl RequestRouter {
 
     /// Handle a JSON-RPC request
     pub async fn handle(&self, request: JsonRpcRequest) -> JsonRpcResponse {
-        let id = request.id.clone();
+        let id = request.id;
 
         let result = match request.method.as_str() {
             "tools/list" => self.handle_tools_list().await,
