@@ -1,0 +1,139 @@
+version: "3"
+
+vars:
+  RUST_ROOT: "rust"
+  PYTHON_ROOT: "python/pheno-mcp"
+
+tasks:
+  default:
+    desc: Run the default build for the detected real language surfaces
+    cmds:
+      - task: build
+
+  build:
+    desc: Build the detected real language surfaces
+    cmds:
+      - cmd: |
+          set -eu
+
+          ran=0
+
+          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
+            echo "Building Rust crates"
+            for crate in phenotype-mcp-core phenotype-mcp-framework; do
+              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
+                echo "  - $crate"
+                (cd "{{.RUST_ROOT}}/$crate" && cargo build)
+              fi
+            done
+            ran=1
+          fi
+
+          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
+            echo "Syncing Python submodule"
+            (cd "{{.PYTHON_ROOT}}" && uv sync)
+            ran=1
+          fi
+
+          if [ "$ran" -eq 0 ]; then
+            echo "No supported build target detected" >&2
+            exit 1
+          fi
+
+  test:
+    desc: Run tests for the detected real language surfaces
+    cmds:
+      - cmd: |
+          set -eu
+
+          ran=0
+
+          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
+            echo "Testing Rust crates"
+            for crate in phenotype-mcp-core phenotype-mcp-framework; do
+              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
+                echo "  - $crate"
+                (cd "{{.RUST_ROOT}}/$crate" && cargo test)
+              fi
+            done
+            ran=1
+          fi
+
+          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
+            echo "Testing Python submodule"
+            (cd "{{.PYTHON_ROOT}}" && uv run pytest)
+            ran=1
+          fi
+
+          if [ "$ran" -eq 0 ]; then
+            echo "No supported test target detected" >&2
+            exit 1
+          fi
+
+  lint:
+    desc: Lint and format-check the detected real language surfaces
+    cmds:
+      - cmd: |
+          set -eu
+
+          ran=0
+
+          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
+            echo "Linting Rust crates"
+            for crate in phenotype-mcp-core phenotype-mcp-framework; do
+              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
+                echo "  - $crate"
+                (
+                  cd "{{.RUST_ROOT}}/$crate" && \
+                  cargo fmt --check && \
+                  cargo clippy --all-targets --all-features -- -D warnings
+                )
+              fi
+            done
+            ran=1
+          fi
+
+          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
+            echo "Linting Python submodule"
+            (
+              cd "{{.PYTHON_ROOT}}" && \
+              uv run ruff check . && \
+              uv run black --check .
+            )
+            ran=1
+          fi
+
+          if [ "$ran" -eq 0 ]; then
+            echo "No supported lint target detected" >&2
+            exit 1
+          fi
+
+  clean:
+    desc: Remove build artefacts for the detected real language surfaces
+    cmds:
+      - cmd: |
+          set -eu
+
+          ran=0
+
+          if [ -f "{{.RUST_ROOT}}/Cargo.toml" ]; then
+            echo "Cleaning Rust crates"
+            for crate in phenotype-mcp-core phenotype-mcp-framework; do
+              if [ -d "{{.RUST_ROOT}}/$crate" ]; then
+                echo "  - $crate"
+                (cd "{{.RUST_ROOT}}/$crate" && cargo clean)
+              fi
+            done
+            ran=1
+          fi
+
+          if [ -f "{{.PYTHON_ROOT}}/pyproject.toml" ]; then
+            echo "Cleaning Python submodule artefacts"
+            python -c "from pathlib import Path; import shutil; root = Path('python/pheno-mcp'); targets = [root / '.pytest_cache', root / '.ruff_cache', root / '.mypy_cache', root / 'build', root / 'dist']; [shutil.rmtree(path) if path.is_dir() else path.unlink() for path in targets if path.exists()]; [shutil.rmtree(path) for path in root.rglob('__pycache__') if path.is_dir()]; [path.unlink() for path in root.rglob('*.pyc') if path.exists()]"
+            ran=1
+          fi
+
+          if [ "$ran" -eq 0 ]; then
+            echo "No supported clean target detected" >&2
+            exit 1
+          fi
