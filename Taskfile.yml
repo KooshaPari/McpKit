@@ -25,9 +25,8 @@ vars:
       fi
   GOFMT_CMD:
     sh: |
-      go_dir="$(dirname "{{.GO_CMD}}")"
-      if [ -x "$go_dir/gofmt" ]; then
-        echo "$go_dir/gofmt"
+      if [ -x /opt/homebrew/bin/gofmt ]; then
+        echo /opt/homebrew/bin/gofmt
       else
         command -v gofmt
       fi
